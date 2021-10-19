@@ -50,10 +50,12 @@ type Client struct {
 // AppClient supports managing a single application.
 type AppClient struct {
 	*Client
-	appID   string
-	track   string
-	version string
-	oem     string
+	appID    string
+	track    string
+	arch     string
+	platform string
+	version  string
+	oem      string
 }
 
 // New creates an omaha client for updating one or more applications.
@@ -113,6 +115,11 @@ func (c *Client) NextPing() <-chan time.Time {
 		d = pingInterval
 	}
 	return FuzzyAfter(d, pingFuzz)
+}
+
+// SetMachine sets if client is a machine of this updater application.
+func (c *Client) SetMachine(isMachine bool) {
+	c.isMachine = isMachine
 }
 
 // AppClient gets the application client for the given application ID.
@@ -182,6 +189,18 @@ func (ac *AppClient) SetVersion(version string) error {
 
 	ac.version = version
 	return nil
+}
+
+// SetArch sets the architecture of this updater application.
+// e.g. "amd64" or "ALL".  Default is current arch.
+func (ac *AppClient) SetArch(arch string) {
+	ac.arch = arch
+}
+
+// SetPlatform sets the architecture of this updater application.
+// e.g. "linux" or "windows".  Default is current platform.
+func (ac *AppClient) SetPlatform(platform string) {
+	ac.platform = platform
 }
 
 // SetTrack sets the application update track or group.
@@ -311,8 +330,17 @@ func (ac *AppClient) NewAppRequest() *omaha.Request {
 	req.Version = ac.clientVersion
 	req.UserID = ac.userID
 	req.SessionID = ac.sessionID
+
 	if ac.isMachine {
 		req.IsMachine = 1
+	}
+
+	if ac.arch != "" {
+		req.OS.Arch = ac.arch
+	}
+
+	if ac.platform != "" {
+		req.OS.Platform = ac.platform
 	}
 
 	app := req.AddApp(ac.appID, ac.version)
